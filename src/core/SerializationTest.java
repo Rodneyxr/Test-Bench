@@ -9,7 +9,6 @@ import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
-import java.util.Arrays;
 
 public class SerializationTest {
 
@@ -21,13 +20,19 @@ public class SerializationTest {
 		event.userList.add(new User("River", 15));
 
 		// serialize event
-		byte[] eventBytes = Tools.getBytesToSend(new User("Test", 1));
-		System.out.println(Arrays.toString(eventBytes));
+		progress("Event Blob");
+		String eventBlob = BLOBUtils.blobify(new User("Test", 1));
+		System.out.println(eventBlob);
 
 		// de-serialize event
-		User user = (User) Tools.createObjectFromBytes(eventBytes);
+		progress("de-serialize event");
+		User user = (User) BLOBUtils.deblobify(eventBlob);
 		System.out.println(user.name);
 		System.out.println(user.age);
+	}
+
+	private static void progress(String message) {
+		System.out.println("\n\n********** " + message + " **********");
 	}
 
 }
@@ -54,44 +59,34 @@ class User implements Serializable {
 	}
 }
 
-class Tools {
-	public static byte[] getBytesToSend(Object o) {
+class BLOBUtils {
+
+	public static String blobify(Serializable o) {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
 		ObjectOutput out = null;
 		byte[] bytes;
 		try {
-			try {
-				out = new ObjectOutputStream(bos);
-			} catch (IOException e) {
-				e.printStackTrace();
-				return null;
-			}
-			try {
-				out.writeObject(o);
-			} catch (IOException e) {
-				e.printStackTrace();
-				return null;
-			}
+			out = new ObjectOutputStream(bos);
+			out.writeObject(o);
 			bytes = bos.toByteArray();
+		} catch (IOException ioe) {
+			ioe.printStackTrace();
+			return null;
 		} finally {
 			try {
-				if (out != null) {
+				if (out != null)
 					out.close();
-				}
-			} catch (IOException ex) {
-				return null;
-			}
-			try {
-				bos.close();
-			} catch (IOException ex) {
+				if (bos != null)
+					bos.close();
+			} catch (IOException ioe) {
 				return null;
 			}
 		}
-		return bytes;
+		return new String(bytes);
 	}
 
-	public static Object createObjectFromBytes(byte[] bytes) {
-		ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+	public static Object deblobify(String blob) {
+		ByteArrayInputStream bis = new ByteArrayInputStream(blob.getBytes());
 		ObjectInput in = null;
 		Object o;
 		try {
@@ -101,24 +96,16 @@ class Tools {
 			ioe.printStackTrace();
 			return null;
 		} catch (ClassNotFoundException cnfe) {
-			System.err.println("Class not found.");
 			cnfe.printStackTrace();
 			return null;
 		} finally {
 			try {
 				bis.close();
-			} catch (IOException ex) {
-				return null;
-			}
-			try {
-				if (in != null) {
-					in.close();
-				}
-			} catch (IOException ex) {
+				in.close();
+			} catch (IOException ioe) {
 				return null;
 			}
 		}
-
 		return o;
 	}
 }
