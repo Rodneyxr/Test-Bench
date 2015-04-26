@@ -1,9 +1,15 @@
 package core;
 
-import java.io.FileOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.ObjectInput;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
+import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 public class SerializationTest {
 
@@ -15,7 +21,13 @@ public class SerializationTest {
 		event.userList.add(new User("River", 15));
 
 		// serialize event
+		byte[] eventBytes = Tools.getBytesToSend(new User("Test", 1));
+		System.out.println(Arrays.toString(eventBytes));
 
+		// de-serialize event
+		User user = (User) Tools.createObjectFromBytes(eventBytes);
+		System.out.println(user.name);
+		System.out.println(user.age);
 	}
 
 }
@@ -31,7 +43,8 @@ class Event {
 	}
 }
 
-class User {
+class User implements Serializable {
+	private static final long serialVersionUID = -7637848027633062485L;
 	public String name;
 	public int age;
 
@@ -42,19 +55,71 @@ class User {
 }
 
 class Tools {
-	public static byte[] serializeObject(Object o) {
-		FileOutputStream fos = null;
-		ObjectOutputStream oos = null;
+	public static byte[] getBytesToSend(Object o) {
+		ByteArrayOutputStream bos = new ByteArrayOutputStream();
+		ObjectOutput out = null;
+		byte[] bytes;
 		try {
-			fos = new FileOutputStream("myfile");
-			oos = new ObjectOutputStream(fos);
-			oos.writeObject(((Event) o).userList);
-			oos.close();
-			fos.close();
+			try {
+				out = new ObjectOutputStream(bos);
+			} catch (IOException e) {
+				e.printStackTrace();
+				return null;
+			}
+			try {
+				out.writeObject(o);
+			} catch (IOException e) {
+				e.printStackTrace();
+				return null;
+			}
+			bytes = bos.toByteArray();
+		} finally {
+			try {
+				if (out != null) {
+					out.close();
+				}
+			} catch (IOException ex) {
+				return null;
+			}
+			try {
+				bos.close();
+			} catch (IOException ex) {
+				return null;
+			}
+		}
+		return bytes;
+	}
+
+	public static Object createObjectFromBytes(byte[] bytes) {
+		ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+		ObjectInput in = null;
+		Object o;
+		try {
+			in = new ObjectInputStream(bis);
+			o = in.readObject();
 		} catch (IOException ioe) {
 			ioe.printStackTrace();
 			return null;
+		} catch (ClassNotFoundException cnfe) {
+			System.err.println("Class not found.");
+			cnfe.printStackTrace();
+			return null;
+		} finally {
+			try {
+				bis.close();
+			} catch (IOException ex) {
+				return null;
+			}
+			try {
+				if (in != null) {
+					in.close();
+				}
+			} catch (IOException ex) {
+				return null;
+			}
 		}
+
+		return o;
 	}
 }
 
