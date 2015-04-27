@@ -3,12 +3,11 @@ package core;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.ObjectInput;
 import java.io.ObjectInputStream;
-import java.io.ObjectOutput;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Base64;
 
 public class SerializationTest {
 
@@ -63,7 +62,7 @@ class BLOBUtils {
 
 	public static String blobify(Serializable o) {
 		ByteArrayOutputStream bos = new ByteArrayOutputStream();
-		ObjectOutput out = null;
+		ObjectOutputStream out = null;
 		byte[] bytes;
 		try {
 			out = new ObjectOutputStream(bos);
@@ -76,18 +75,18 @@ class BLOBUtils {
 			try {
 				if (out != null)
 					out.close();
-				if (bos != null)
-					bos.close();
+				bos.close();
 			} catch (IOException ioe) {
 				return null;
 			}
 		}
-		return new String(bytes);
+		return Base64.getEncoder().encodeToString(bytes);// new String(bytes);
 	}
 
 	public static Object deblobify(String blob) {
-		ByteArrayInputStream bis = new ByteArrayInputStream(blob.getBytes());
-		ObjectInput in = null;
+		byte[] bytes = Base64.getDecoder().decode(blob);
+		ByteArrayInputStream bis = new ByteArrayInputStream(bytes);
+		ObjectInputStream in = null;
 		Object o;
 		try {
 			in = new ObjectInputStream(bis);
@@ -101,7 +100,8 @@ class BLOBUtils {
 		} finally {
 			try {
 				bis.close();
-				in.close();
+				if (in != null)
+					in.close();
 			} catch (IOException ioe) {
 				return null;
 			}
